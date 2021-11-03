@@ -59,8 +59,6 @@ flux bootstrap github \
 --repository=${GITHUB_REPO} \
 --path=clusters/staging \
 --components-extra=image-reflector-controller,image-automation-controller  \
---ssh-key-algorithm=ecdsa \
---ssh-ecdsa-curve=p521 \
 --personal
 ```
 ### production
@@ -75,8 +73,6 @@ flux bootstrap github \
 --repository=${GITHUB_REPO} \
 --path=clusters/production \
 --components-extra=image-reflector-controller,image-automation-controller  \
---ssh-key-algorithm=ecdsa \
---ssh-ecdsa-curve=p521 \
 --personal
 ```
 
