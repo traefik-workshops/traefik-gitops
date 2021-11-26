@@ -1,9 +1,38 @@
 # Traefik GitOps with Flux 
 
-## Create repository structure
+## GitOps Principals
+ - **Declartive** - the desired stated of the infrastrucutre is expressed declartively.
+ - **Versioned** and immutable - the desired state is stored in a source of truth the enforces immutability. 
+ - **Pulled Automatically** from a source of truth *a git repo* - the changes are pulled by Controllers and applied on a cluster.
+ - **Continuously Reconcilled** - the agents are continuously observe the desired state and attempt to apply the desired state.
+
+## Prerequsities
+- Two Kubernets clusters acting as e.g. staging and production environments
+- An empty Github Repo
+- Exported environment variables GITHUB_TOKEN, GITHUB_USER, GITHUB_REPO
+- the latest Flux CLI installed on a workstation
+
+## Create the inrastructure repository
+
+Create the Git repository where all configuration files will be stored. In our example we will use GITHUB repo but other alternative solution are also supported. See Flux documentation to learn on how to use it with Gitlab or Bitbucket. 
+
+The following command can be used to create Github repository:
 
 ```sh
-mkdir -pv ./apps/base/traefik ./apps/staging  ./apps/production  ./clusters/production ./clusters/staging ./infrastructure/crds ./infrastructure/sources
+gh repo create flux-traefik-demo --public --description "Flux and Traefik - demo"  --confirm
+```
+
+
+## Create repository structure
+
+The following command will create the top directory structures to keep manifests that describes the entire infrastructure. 
+
+- **apps** - contains a custom manifests per cluster and and Helm Releases
+- **infrastructure** - contains a common infrastrucutre tools such as Helm repository definitions or common infrastructure comoponents
+- **clusters** - contains a Flux configuration per cluster
+
+```sh
+mkdir -pv ./apps/{base,staging,production}/traefik  ./clusters/{production,staging} ./infrastructure/{sources,crds} 
 ```
 
 ```sh
@@ -24,8 +53,8 @@ mkdir -pv ./apps/base/traefik ./apps/staging  ./apps/production  ./clusters/prod
 1. Create RBAC resources:
 
 ```yaml
----
 cat > ./apps/base/traefik/rbac.yaml <<EOF
+---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -100,7 +129,7 @@ EOF
 2. Create Traefik deployment resource.
 
 ```yaml
-cat > ./apps/base/traefik/traefik.yaml
+cat > ./apps/base/traefik/traefik.yaml << EOF
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -125,7 +154,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: traefik
-          image: traefik:2.5.3
+          image: traefik:2.5.4
           args:
             - "--entryPoints.web.address=:8000/tcp"
             - "--entryPoints.websecure.address=:8443/tcp"
@@ -188,7 +217,7 @@ EOF
 3. Create a load balancer type service that expose Traefik. 
 
 ```yaml
-cat > ./apps/base/traefik/svc.yaml
+cat > ./apps/base/traefik/svc.yaml << EOF
 ---
 apiVersion: v1
 kind: Service
@@ -218,7 +247,7 @@ EOF
 5. Create kustomization files with listed all created resources. 
 
 ```yaml
-cat > ./apps/base/traefik/kustomization.yaml
+cat > ./apps/base/traefik/kustomization.yaml << EOF
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -235,18 +264,19 @@ EOF
 1. Create namespace for Traefik resources. 
 
 ```yaml
-cat > ./apps/production/namespace.yaml << EOF
+cat > ./apps/production/traefik/namespace.yaml << EOF
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: traefik-production
+EOF  
 ```
 
 2. Create a patch for Traefik deployment for production cluster. 
 
 ```yaml
-cat > ./apps/production/traefik-patch.yaml << EOF
+cat > ./apps/production/traefik/traefik-patch.yaml << EOF
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -274,7 +304,7 @@ EOF
 3. Create Kustomization to add resources. 
 
 ```yaml
-cat > ./apps/production/kustomization.yaml << EOF
+cat > ./apps/production/traefik/kustomization.yaml << EOF
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -285,6 +315,7 @@ resources:
 
 patchesStrategicMerge:
   - traefik-patch.yaml
+EOF  
 ```
 
 ### Staging cluster
@@ -292,20 +323,19 @@ patchesStrategicMerge:
 1.  Create a namespace for Traefik deployment on a staging cluster. 
 
 ```yaml
-cat > ./apps/staging/namespace.yaml << EOF
+cat > ./apps/staging/traefik/namespace.yaml << EOF
 ---
-
 apiVersion: v1
 kind: Namespace
 metadata:
   name: traefik-staging
+EOF  
 ``` 
 
 2. Create Traefik patch for staging cluster. 
 
 ```yaml
-cat > ./apps/staging/traefik-patch.yaml << EOF
-
+cat > ./apps/staging/traefik/traefik-patch.yaml << EOF
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -329,12 +359,13 @@ spec:
             - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
             - "--certificatesresolvers.myresolver.acme.email=jakub.hajek+webinar@traefik.io"
             - "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+EOF            
 ```
 
 3. Create Kustomization resource for deploying Traefik related resources. 
 
 ```yaml
-cat > ./apps/staging/kustomization.yaml << EOF
+cat > ./apps/staging/traefik/kustomization.yaml << EOF
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -345,6 +376,7 @@ resources:
 
 patchesStrategicMerge:
   - traefik-patch.yaml
+EOF  
 ```
 
 ## Create Traefik CRD
@@ -352,7 +384,7 @@ patchesStrategicMerge:
 Traefik requires to have Custom Resources deployed on each of the cluster. The following command will create a common resources including Treafik's CRD that will be deployed on each of the cluster. In that example on two clusters: `staging` and `production`
 
 ```yaml
-cat > ./infrastructure/crds/kustomization.yaml << EOF
+cat > ./infrastructure/crds/traefik-crds.yaml << EOF
 ---
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
@@ -423,6 +455,7 @@ kind: Kustomization
 namespace: flux-system
 resources:
   - traefik-crds.yaml
+EOF  
 ```
 
 Create kustomization file that deploy the file containing in CRDS directory.
@@ -434,30 +467,138 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - crds
+EOF  
 ```
 
+## Create the initial Flux Configuration:
+
+### Production cluster:
+
+```yaml
+cat > ./clusters/production/apps.yaml << EOF
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  dependsOn:
+    - name: infrastructure
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./apps/production
+  prune: true
+  validation: client
+ EOF 
+```
+
+```yaml
+cat > ./clusters/production/infrastructure.yaml << EOF
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure
+  prune: true
+  validation: client
+EOF  
+```
+
+### Staging cluster:
+
+```yaml
+cat > ./clusters/staging/apps.yaml << EOF
+---   
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  dependsOn:
+    - name: infrastructure
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./apps/staging
+  prune: true
+  validation: client
+EOF  
+```
+
+```yaml
+cat > ./clusters/staging/infrastructure.yaml << EOF
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure
+  prune: true
+  validation: client
+EOF
+```
+
+
+## Creating the initial commit
+
+Once all initial configuration has been created we can commit and push the code to the repository. 
+The next step is to bootstrap clusters with Flux CLI command.
+
+```sh
+├── apps
+│   ├── base
+│   │   └── traefik
+│   │       ├── kustomization.yaml
+│   │       ├── rbac.yaml
+│   │       ├── svc.yaml
+│   │       └── traefik.yaml
+│   ├── production
+│   │   └── traefik
+│   │       ├── kustomization.yaml
+│   │       ├── namespace.yaml
+│   │       └── traefik-patch.yaml
+│   └── staging
+│       └── traefik
+│           ├── kustomization.yaml
+│           ├── namespace.yaml
+│           └── traefik-patch.yaml
+├── clusters
+│   ├── production
+│   │   ├── apps.yaml
+│   │   └── infrastructure.yaml
+│   └── staging
+│       ├── apps.yaml
+│       └── infrastructure.yaml
+└── infrastructure
+    ├── crds
+    │   └── kustomization.yaml
+    ├── kustomization.yaml
+    └── sources
+
+```
 
 ## Bootstrap clusters
 
-```
-clusters
-├── production
-│   ├── apps.yaml
-│   ├── flux-system
-│   │   ├── gotk-components.yaml
-│   │   ├── gotk-sync.yaml
-│   │   └── kustomization.yaml
-│   └── infrastructure.yaml
-└── staging
-    ├── apps.yaml
-    ├── flux-system
-    │   ├── gotk-components.yaml
-    │   ├── gotk-sync.yaml
-    │   └── kustomization.yaml
-    └── infrastructure.yaml
-```
+Once the configuration files are created we can boostrap Flux on both clusters. Before running the bootstrap command we have to ensure that the following environments variables are exported.
 
-```
+```sh
 export GITHUB_TOKEN
 export GITHUB_USER
 export GITHUB_REPO
@@ -476,8 +617,6 @@ flux bootstrap github \
 --personal
 ```
 ### production
-
-
 
 ```sh
 flux bootstrap github \
@@ -498,6 +637,6 @@ flux bootstrap github \
 
 ## To do
 
-- [] promotion from staging to production
-- [] webhook recievers 
-- [] flagger 
+- [ ] promotion from staging to production
+- [ ] webhook recievers 
+- [ ] flagger 
