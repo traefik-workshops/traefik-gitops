@@ -34,13 +34,12 @@ spec:
             timeoutSeconds: 2
           resources:
             requests: 
-              cpu: 100m
+              cpu: 10m
               memory: 128Mi
             limits: 
               cpu: 200m
               memory: 256Mi  
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -52,4 +51,3 @@ spec:
       port: 80
   selector:
     task: whoamiv1
-
