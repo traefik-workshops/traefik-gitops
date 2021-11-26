@@ -7,9 +7,10 @@
  - **Continuously Reconcilled** - the agents are continuously observe the desired state and attempt to apply the desired state.
 
 ## Prerequsities
-- Two Kubernets clusters acting as e.g. staging and production environments
+- Two Kubernetes clusters acting as e.g. staging and production environments
 - An empty Github Repo
 - Exported environment variables GITHUB_TOKEN, GITHUB_USER, GITHUB_REPO
+
 - the latest Flux CLI installed on a workstation
 
 ## Create the inrastructure repository
@@ -631,12 +632,257 @@ flux bootstrap github \
 
 ## Create base deployment for Whoami application
 
+Create a base configuration for Whoami application: 
+
+```sh
+mkdir -pv ./apps/{base,staging,production}/whoami
+```
+
+```yaml
+cat > ./apps/base/whoami/deployment.yaml << EOF
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: whoamiv1
+  labels:
+    name: whoamiv1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      task: whoamiv1
+  template:
+    metadata:
+      labels:
+        task: whoamiv1
+    spec:
+      containers:
+        - name: whoamiv1
+          image: traefik/traefikee-webapp-demo:v2
+          args:
+            - -ascii
+            - -name=FOO
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 80
+            failureThreshold: 1
+            initialDelaySeconds: 2
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 2
+          resources:
+            requests: 
+              cpu: 10m
+              memory: 128Mi
+            limits: 
+              cpu: 200m
+              memory: 256Mi  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoamiv1
+  namespace: app
+spec:
+  ports:
+    - name: http
+      port: 80
+  selector:
+    task: whoamiv1
+EOF
+```
+
+Create a IngressRoute object that expose Whoami application: 
+
+```yaml
+cat > ./apps/base/whoami/ingressroute.yaml << EOF
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(\`fix.me\`)
+      services:
+        - kind: Service
+          name: whoamiv1
+          port: 80
+  tls:
+    certResolver: myresolver
+EOF
+```
+
+```yaml
+cat > ./apps/base/whoami/kustomization.yaml << EOF
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - ingressroute.yaml
+EOF  
+```
+
+### Create custom release for Staging environment.
+
+Create namespace where Whoami will be deployed:
+
+```yaml
+cat > ./apps/staging/whoami/namespace.yaml <<EOF
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: whoami-staging
+EOF
+```
+Create patch for Whoami application: 
+
+```yaml
+cat > ./apps/staging/whoami/whoami-patch.yaml << EOF
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: whoamiv1
+spec:
+  replicas: 4
+  template:
+    spec:
+      containers:
+        - name: whoamiv1
+          args:
+            - -ascii
+            - -name=STAGING  
+EOF
+```
+Create patch that updates Host rule for the Whoami application:
+
+```yaml
+cat > ./apps/staging/whoami/ingressroute-patch.yaml <<EOF
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami
+spec:
+  routes:
+   - kind: Rule
+     match: Host(\`whoami.t1.demo.traefiklabs.tech\`)
+     services:
+        - kind: Service
+          name: whoamiv1
+          port: 80
+EOF
+```
+
+Create a Kustomization configuration to deploy the Whoami application on staging cluster
+
+```yaml
+cat > ./apps/staging/whoami/kustomization.yaml << EOF
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: whoami-staging
+resources:
+  - namespace.yaml
+  - ../../base/whoami
+
+patchesStrategicMerge:
+  - whoami-patch.yaml
+  - ingressroute-patch.yaml
+EOF  
+```
+
+### Create custom release for Production environment.
+
+Create a namespace where Whoami on production will be deployed: 
+
+```yaml
+cat > ./apps/production/whoami/namespace.yaml << EOF
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: whoami-production
+EOF
+```  
+
+Create patch for Whoami application: 
+
+```yaml
+cat > ./apps/production/whoami/whoami-patch.yaml << EOF
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: whoamiv1
+spec:
+  replicas: 8
+  template:
+    spec:
+      containers:
+        - name: whoamiv1
+          args:
+            - -ascii
+            - -name=PRODUCTION
+EOF
+```            
+
+Create patch that updates Host rule for the Whoami application:
+
+```yaml
+cat > ./apps/production/whoami/ingressroute-patch.yaml << EOF
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami
+spec:
+  routes:
+   - kind: Rule
+     match: Host(\`whoami.t2.demo.traefiklabs.tech\`)
+     services:
+        - kind: Service
+          name: whoamiv1
+          port: 80
+EOF
+```          
+
+Create a Kustomization configuration to deploy the Whoami application on staging cluster
+
+```yaml
+cat > ./apps/production/whoami/kustomization.yaml << EOF
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: whoami-production
+resources:
+  - namespace.yaml
+  - ../../base/whoami
+
+patchesStrategicMerge:
+  - whoami-patch.yaml
+  - ingressroute-patch.yaml
+EOF
+```
+
 ## Questions
 
 - how to test pull requests before merging to main branch?
 
 ## To do
 
-- [ ] promotion from staging to production
-- [ ] webhook recievers 
-- [ ] flagger 
+- [] GITHUB actions that validate the code
+- [] GITHUB actions that creates PR if there is a new Flux release. 
+- [] promotion from staging to production
+- [] webhook recievers 
+- [] flagger 
