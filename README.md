@@ -1,10 +1,10 @@
 # Traefik GitOps with Flux
 
-## GitOps Principals
- - **Declartive** - the desired stated of the infrastrucutre is expressed declartively.
- - **Versioned** and immutable - the desired state is stored in a source of truth the enforces immutability.
+## GitOps Principles
+ - **Declarative** - the desired stated of the infrastrucutre is expressed declaratively.
+ - **Versioned** and immutable - the desired state is stored in a source of truth that enforces immutability.
  - **Pulled Automatically** from a source of truth *a git repo* - the changes are pulled by Controllers and applied on a cluster.
- - **Continuously Reconcilled** - the agents are continuously observe the desired state and attempt to apply the desired state.
+ - **Continuously Reconciled** - the agents are continuously observing the desired state and attempt to apply the desired state.
 
 ## Prerequsities
 - Two Kubernetes clusters acting as e.g. staging and production environments
@@ -13,7 +13,7 @@
 
 - the latest Flux CLI installed on a workstation
 
-## Create the inrastructure repository
+## Create the infrastructure repository
 
 Create the Git repository where all configuration files will be stored. In our example we will use GITHUB repo but other alternative solution are also supported. See Flux documentation to learn on how to use it with Gitlab or Bitbucket.
 
