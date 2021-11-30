@@ -23,6 +23,7 @@ The following command can be used to create Github repository:
 gh repo create flux-traefik-demo --public --description "Flux and Traefik - demo"  --confirm
 ```
 
+This command assumes you are in an empty directory with no git repository and will have the same effect as running `git init`. If your home directory is a git repository, you might want to run `git init` in an empty directory first, before running the above command. This will create the remote repository and take care of setting up the `git remote`.
 
 ## Create repository structure
 
