@@ -1,8 +1,8 @@
-# Traefik GitOps with Flux 
+# Traefik GitOps with Flux
 
 ## GitOps Principals
  - **Declartive** - the desired stated of the infrastrucutre is expressed declartively.
- - **Versioned** and immutable - the desired state is stored in a source of truth the enforces immutability. 
+ - **Versioned** and immutable - the desired state is stored in a source of truth the enforces immutability.
  - **Pulled Automatically** from a source of truth *a git repo* - the changes are pulled by Controllers and applied on a cluster.
  - **Continuously Reconcilled** - the agents are continuously observe the desired state and attempt to apply the desired state.
 
@@ -15,7 +15,7 @@
 
 ## Create the inrastructure repository
 
-Create the Git repository where all configuration files will be stored. In our example we will use GITHUB repo but other alternative solution are also supported. See Flux documentation to learn on how to use it with Gitlab or Bitbucket. 
+Create the Git repository where all configuration files will be stored. In our example we will use GITHUB repo but other alternative solution are also supported. See Flux documentation to learn on how to use it with Gitlab or Bitbucket.
 
 The following command can be used to create Github repository:
 
@@ -27,20 +27,20 @@ This command assumes you are in an empty directory with no git repository and wi
 
 ## Create repository structure
 
-The following command will create the top directory structures to keep manifests that describes the entire infrastructure. 
+The following command will create the top directory structures to keep manifests that describes the entire infrastructure.
 
 - **apps** - contains a custom manifests per cluster and and Helm Releases
 - **infrastructure** - contains a common infrastrucutre tools such as Helm repository definitions or common infrastructure comoponents
 - **clusters** - contains a Flux configuration per cluster
 
 ```sh
-mkdir -pv ./apps/{base,staging,production}/traefik  ./clusters/{production,staging} ./infrastructure/{sources,crds} 
+mkdir -pv ./apps/{base,staging,production}/traefik  ./clusters/{production,staging} ./infrastructure/{sources,crds}
 ```
 
 ```sh
 ├── apps
 │   ├── base
-│   ├── production 
+│   ├── production
 │   └── staging
 ├── infrastructure
 │   ├── crds
@@ -213,10 +213,10 @@ spec:
       volumes:
         - name: storage-volume
           emptyDir: {}
-EOF          
+EOF
 ```
 
-3. Create a load balancer type service that expose Traefik. 
+3. Create a load balancer type service that expose Traefik.
 
 ```yaml
 cat > ./apps/base/traefik/svc.yaml << EOF
@@ -243,10 +243,10 @@ spec:
       name: websecure
       targetPort: websecure
       protocol: TCP
-EOF      
+EOF
 ```
 
-5. Create kustomization files with listed all created resources. 
+5. Create kustomization files with listed all created resources.
 
 ```yaml
 cat > ./apps/base/traefik/kustomization.yaml << EOF
@@ -258,12 +258,12 @@ resources:
   - traefik.yaml
   - svc.yaml
 EOF
-```  
+```
 ## Customize Traefik configuration per cluster
 
 ### Production cluster
 
-1. Create namespace for Traefik resources. 
+1. Create namespace for Traefik resources.
 
 ```yaml
 cat > ./apps/production/traefik/namespace.yaml << EOF
@@ -272,10 +272,10 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: traefik-production
-EOF  
+EOF
 ```
 
-2. Create a patch for Traefik deployment for production cluster. 
+2. Create a patch for Traefik deployment for production cluster.
 
 ```yaml
 cat > ./apps/production/traefik/traefik-patch.yaml << EOF
@@ -297,13 +297,13 @@ spec:
             - "--api.dashboard=true"
             - "--ping=true"
             - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.allowCrossNamespace=true" 
+            - "--providers.kubernetescrd.allowCrossNamespace=true"
             - "--certificatesresolvers.myresolver.acme.storage=/data/acme.json"
             - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
             - "--certificatesresolvers.myresolver.acme.email=jakub.hajek+webinar@traefik.io"
-EOF            
-```           
-3. Create Kustomization to add resources. 
+EOF
+```
+3. Create Kustomization to add resources.
 
 ```yaml
 cat > ./apps/production/traefik/kustomization.yaml << EOF
@@ -317,12 +317,12 @@ resources:
 
 patchesStrategicMerge:
   - traefik-patch.yaml
-EOF  
+EOF
 ```
 
 ### Staging cluster
 
-1.  Create a namespace for Traefik deployment on a staging cluster. 
+1.  Create a namespace for Traefik deployment on a staging cluster.
 
 ```yaml
 cat > ./apps/staging/traefik/namespace.yaml << EOF
@@ -331,10 +331,10 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: traefik-staging
-EOF  
-``` 
+EOF
+```
 
-2. Create Traefik patch for staging cluster. 
+2. Create Traefik patch for staging cluster.
 
 ```yaml
 cat > ./apps/staging/traefik/traefik-patch.yaml << EOF
@@ -356,15 +356,15 @@ spec:
             - "--api.dashboard=true"
             - "--ping=true"
             - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.allowCrossNamespace=true" 
+            - "--providers.kubernetescrd.allowCrossNamespace=true"
             - "--certificatesresolvers.myresolver.acme.storage=/data/acme.json"
             - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
             - "--certificatesresolvers.myresolver.acme.email=jakub.hajek+webinar@traefik.io"
             - "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-EOF            
+EOF
 ```
 
-3. Create Kustomization resource for deploying Traefik related resources. 
+3. Create Kustomization resource for deploying Traefik related resources.
 
 ```yaml
 cat > ./apps/staging/traefik/kustomization.yaml << EOF
@@ -378,7 +378,7 @@ resources:
 
 patchesStrategicMerge:
   - traefik-patch.yaml
-EOF  
+EOF
 ```
 
 ## Create Traefik CRD
@@ -457,7 +457,7 @@ kind: Kustomization
 namespace: flux-system
 resources:
   - traefik-crds.yaml
-EOF  
+EOF
 ```
 
 Create kustomization file that deploy the file containing in CRDS directory.
@@ -469,7 +469,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - crds
-EOF  
+EOF
 ```
 
 ## Create the initial Flux Configuration:
@@ -494,7 +494,7 @@ spec:
   path: ./apps/production
   prune: true
   validation: client
- EOF 
+EOF
 ```
 
 ```yaml
@@ -513,14 +513,14 @@ spec:
   path: ./infrastructure
   prune: true
   validation: client
-EOF  
+EOF
 ```
 
 ### Staging cluster:
 
 ```yaml
 cat > ./clusters/staging/apps.yaml << EOF
----   
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
 kind: Kustomization
 metadata:
@@ -536,7 +536,7 @@ spec:
   path: ./apps/staging
   prune: true
   validation: client
-EOF  
+EOF
 ```
 
 ```yaml
@@ -560,7 +560,7 @@ EOF
 
 ## Creating the initial commit
 
-Once all initial configuration has been created we can commit and push the code to the repository. 
+Once all initial configuration has been created we can commit and push the code to the repository.
 The next step is to bootstrap clusters with Flux CLI command.
 
 ```sh
@@ -633,7 +633,7 @@ flux bootstrap github \
 
 ## Create base deployment for Whoami application
 
-Create a base configuration for Whoami application: 
+Create a base configuration for Whoami application:
 
 ```sh
 mkdir -pv ./apps/{base,staging,production}/whoami
@@ -676,12 +676,12 @@ spec:
             successThreshold: 1
             timeoutSeconds: 2
           resources:
-            requests: 
+            requests:
               cpu: 10m
               memory: 128Mi
-            limits: 
+            limits:
               cpu: 200m
-              memory: 256Mi  
+              memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -697,7 +697,7 @@ spec:
 EOF
 ```
 
-Create a IngressRoute object that expose Whoami application: 
+Create a IngressRoute object that expose Whoami application:
 
 ```yaml
 cat > ./apps/base/whoami/ingressroute.yaml << EOF
@@ -729,7 +729,7 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - ingressroute.yaml
-EOF  
+EOF
 ```
 
 ### Create custom release for Staging environment.
@@ -745,7 +745,7 @@ metadata:
   name: whoami-staging
 EOF
 ```
-Create patch for Whoami application: 
+Create patch for Whoami application:
 
 ```yaml
 cat > ./apps/staging/whoami/whoami-patch.yaml << EOF
@@ -762,7 +762,7 @@ spec:
         - name: whoamiv1
           args:
             - -ascii
-            - -name=STAGING  
+            - -name=STAGING
 EOF
 ```
 Create patch that updates Host rule for the Whoami application:
@@ -800,12 +800,12 @@ resources:
 patchesStrategicMerge:
   - whoami-patch.yaml
   - ingressroute-patch.yaml
-EOF  
+EOF
 ```
 
 ### Create custom release for Production environment.
 
-Create a namespace where Whoami on production will be deployed: 
+Create a namespace where Whoami on production will be deployed:
 
 ```yaml
 cat > ./apps/production/whoami/namespace.yaml << EOF
@@ -815,9 +815,9 @@ kind: Namespace
 metadata:
   name: whoami-production
 EOF
-```  
+```
 
-Create patch for Whoami application: 
+Create patch for Whoami application:
 
 ```yaml
 cat > ./apps/production/whoami/whoami-patch.yaml << EOF
@@ -836,7 +836,7 @@ spec:
             - -ascii
             - -name=PRODUCTION
 EOF
-```            
+```
 
 Create patch that updates Host rule for the Whoami application:
 
@@ -856,7 +856,7 @@ spec:
           name: whoamiv1
           port: 80
 EOF
-```          
+```
 
 Create a Kustomization configuration to deploy the Whoami application on staging cluster
 
@@ -883,7 +883,7 @@ EOF
 ## To do
 
 - [] GITHUB actions that validate the code
-- [] GITHUB actions that creates PR if there is a new Flux release. 
+- [] GITHUB actions that creates PR if there is a new Flux release.
 - [] promotion from staging to production
-- [] webhook recievers 
-- [] flagger 
+- [] webhook recievers
+- [] flagger
