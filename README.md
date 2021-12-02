@@ -876,14 +876,10 @@ patchesStrategicMerge:
 EOF
 ```
 
-## Questions
-
-- how to test pull requests before merging to main branch?
-
 ## To do
 
-- [] GITHUB actions that validate the code
-- [] GITHUB actions that creates PR if there is a new Flux release.
-- [] promotion from staging to production
-- [] webhook recievers
-- [] flagger
+- [x] GITHUB actions that validate the code
+- [x] GITHUB actions that creates PR if there is a new Flux release.
+- [ ] promotion from staging to production
+- [ ] webhook recievers
+- [ ] flagger
