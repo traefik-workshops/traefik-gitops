@@ -479,7 +479,7 @@ EOF
 ```yaml
 cat > ./clusters/production/apps.yaml << EOF
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: apps
@@ -493,14 +493,14 @@ spec:
     name: flux-system
   path: ./apps/production
   prune: true
-  validation: client
+  wait: true
 EOF
 ```
 
 ```yaml
 cat > ./clusters/production/infrastructure.yaml << EOF
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: infrastructure
@@ -512,7 +512,7 @@ spec:
     name: flux-system
   path: ./infrastructure
   prune: true
-  validation: client
+  wait: true
 EOF
 ```
 
@@ -521,7 +521,7 @@ EOF
 ```yaml
 cat > ./clusters/staging/apps.yaml << EOF
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: apps
@@ -535,13 +535,13 @@ spec:
     name: flux-system
   path: ./apps/staging
   prune: true
-  validation: client
+  wait: true
 EOF
 ```
 
 ```yaml
 cat > ./clusters/staging/infrastructure.yaml << EOF
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: infrastructure
@@ -553,7 +553,7 @@ spec:
     name: flux-system
   path: ./infrastructure
   prune: true
-  validation: client
+  wait: true
 EOF
 ```
 
