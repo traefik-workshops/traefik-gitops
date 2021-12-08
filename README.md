@@ -20,7 +20,7 @@ Create the Git repository where all configuration files will be stored. In our e
 The following command can be used to create Github repository:
 
 ```sh
-gh repo create flux-traefik-demo --public --description "Flux and Traefik - demo"  --confirm
+gh repo create flux-traefik-demo --public --description "Flux and Traefik - demo"  --clone
 ```
 
 This command assumes you are in an empty directory with no git repository and will have the same effect as running `git init`. If your home directory is a git repository, you might want to run `git init` in an empty directory first, before running the above command. This will create the remote repository and take care of setting up the `git remote`.
@@ -590,10 +590,10 @@ The next step is to bootstrap clusters with Flux CLI command.
 │       └── infrastructure.yaml
 └── infrastructure
     ├── crds
-    │   └── kustomization.yaml
+    │   ├── kustomization.yaml
+    │   └── traefik-crds.yaml
     ├── kustomization.yaml
     └── sources
-
 ```
 
 ## Bootstrap clusters
